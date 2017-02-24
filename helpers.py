@@ -3,6 +3,9 @@ import cv2
 from functools import reduce
 import pandas as pd
 import operator
+from sklearn import linear_model
+from scipy import interpolate
+import itertools
 
 
 def grayscale(img):
@@ -51,6 +54,89 @@ def region_of_interest(img, vertices):
     return masked_image
 
 
+def classify_left_right_lanes(lines):
+
+    left_lane_lines = []
+    right_lane_lines = []
+
+    for line in lines:
+        for x1, y1, x2, y2 in line:
+            a = ((y2 - y1) / (x2 - x1)) # this assumes that the road is mostly straight and there is slope difference
+            # in the field of view.
+            if a > 0:
+                right_lane_lines.append([x1, y1, x2, y2])
+            else:
+                left_lane_lines.append([x1, y1, x2, y2])
+
+    # Apply spline interpolation between line segments of the left and right lines
+    num_right_lines = len(right_lane_lines)
+    num_left_lines = len(left_lane_lines)
+    return np.array(left_lane_lines, dtype=np.int32).reshape(num_left_lines,1,4), \
+           np.array(right_lane_lines, dtype=np.int32).reshape(num_right_lines,1,4)
+
+def interpolate_hough_lines(lines):
+
+    x=[]
+    y=[]
+    for line in lines:
+        for x1, y1, x2, y2 in line:
+            x.append(x1)
+            x.append(x2)
+            y.append(y1)
+            y.append(y2)
+
+    f = interpolate.interp1d(np.asarray(x), np.asarray(y), kind='linear')
+
+    return f
+
+def ransac_fit_hough_lines(lines):
+    x = []
+    y = []
+    for line in lines:
+        for x1, y1, x2, y2 in line:
+            x.append(x1)
+            x.append(x2)
+            y.append(y1)
+            y.append(y2)
+
+
+    X=np.asarray(x).reshape(len(x),1)
+    y=np.asarray(y)
+
+    # Robustly fit linear model with RANSAC algorithm
+    model_ransac = linear_model.RANSACRegressor(linear_model.LinearRegression())
+    model_ransac.fit(X, y)
+    inlier_mask = model_ransac.inlier_mask_
+    outlier_mask = np.logical_not(inlier_mask)
+
+    # Predict data of estimated models
+    line_X = np.arange(min(X), max(X))
+    line_y_ransac = model_ransac.predict(line_X[:, np.newaxis])
+
+    #line_segments=np.array([line_X, line_y_ransac])#.reshape(4,int(int(line_X.size)/int(2)))
+    points = list(zip(line_X, line_y_ransac.astype(np.int64)))
+
+    return points
+
+def draw_model(img, points, color=[255, 0, 0], thickness=2):
+
+    # for point in points[::2]:
+    #     for next_point in points[1::2]:
+    #         cv2.line(img, (point[0], point[1]), (next_point[0], next_point[1]), color, thickness)
+    cv2.line(img, points[0], points[-1], color, thickness)
+
+    # pairs = pairwise(points)
+    # [element for tupl in pairs for element in tupl]
+    # for pair in pairs:
+    #     for x1, y1, x2, y2 in list(pair):
+    #         cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
 def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     """
     NOTE: this is the function you might want to use as a starting point once you want to
@@ -68,9 +154,10 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     If you want to make the lines semi-transparent, think about combining
     this function with the weighted_img() function below
     """
+
     for line in lines:
-        for x1, y1, x2, y2 in line:
-            cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+         for x1, y1, x2, y2 in line:
+             cv2.line(img, (x1, y1), (x2, y2), color, thickness)
 
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
@@ -79,11 +166,10 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
 
     Returns an image with hough lines drawn.
     """
-    lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len,
-                            maxLineGap=max_line_gap)
+    lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap)
     line_img = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
     draw_lines(line_img, lines)
-    return line_img
+    return lines, line_img
 
 
 # Python 3 has support for cool math symbols.
