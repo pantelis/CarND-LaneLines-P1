@@ -13,7 +13,7 @@ the road from monocular video camera streams.
 
 [//]: # (Image References)
 
-[out_solidWhiteCurve]: ./test_images/out_solidWhiteCurve.jpg "Detecting
+[out_solidWhiteCurve]: https://github.com/pantelis/CarND-LaneLines-P1/blob/master/test_images/out_solidWhiteCurve.jpg "Detecting
 lanes in an image containing a solid white curve"
 
 [out_solidWhiteRight]: ./test_images/out_solidWhiteRight.jpg "Detecting
