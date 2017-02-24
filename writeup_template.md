@@ -1,21 +1,22 @@
-#**Finding Lane Lines on the Road** 
+# Finding Lane Lines on the Road
 
-##Writeup Template
+Pantelis Monogioudis
 
-###You can use this file as a template for your writeup if you want to submit it as a markdown file. But feel free to use some other method and submit a pdf if you prefer.
+NOKIA
+
+**Summary**
+
+The goal of this project is to make a pipeline that finds lane lines on
+the road from monocular video camera streams.
 
 ---
 
-**Finding Lane Lines on the Road**
-
-The goals / steps of this project are the following:
-* Make a pipeline that finds lane lines on the road
-* Reflect on your work in a written report
-
-
 [//]: # (Image References)
 
-[image1]: ./examples/grayscale.jpg "Grayscale"
+[out_solidWhiteCurve]: ./test_images/out_solidWhiteCurve.jpg "Detecting lanes in an image containing a solid white curve"
+
+[out_solidWhiteRight]: ./test_images/out_solidWhiteRight.jpg "Detecting lanes in an image containing a solid white curve"
+
 
 ---
 

@@ -61,7 +61,26 @@ for i in os.listdir(imageSourceDir):
     hough_lines,hough_image = helpers.hough_lines(masked_edges, parameters.Hough.rho, parameters.Hough.theta, parameters.Hough.threshold,
                              parameters.Hough.min_line_length, parameters.Hough.max_line_gap)
 
-    superposed_image = helpers.weighted_img(hough_image, image, α=0.8, β=1., λ=0.)
+    # classify left and right lane lines
+    left_lane_lines, right_lane_lines = helpers.classify_left_right_lanes(hough_lines)
+
+    # RANSAC fit left and right lane lines
+    fitted_left_lane_points = helpers.ransac_fit_hough_lines(left_lane_lines)
+    fitted_right_lane_points = helpers.ransac_fit_hough_lines(right_lane_lines)
+    helpers.draw_model(image, fitted_left_lane_points, color=[255, 0, 0], thickness=2)
+    helpers.draw_model(image, fitted_right_lane_points, color=[255, 0, 0], thickness=2)
+
+    # Raw hough_lines image
+    # helpers.draw_lines(raw_lines_img, hough_lines, color=[255, 0, 0], thickness=2)
+
+    # 1D Interpolator - does not work as good as RANSAC so its commented out
+    # interpolated_left_lane_points = helpers.interpolate_hough_lines(left_lane_lines)
+    # interpolated_right_lane_points = helpers.interpolate_hough_lines(left_lane_lines)
+    # helpers.draw_model(image, interpolated_left_lane_points, color=[105, 0, 0], thickness=2)
+    # helpers.draw_model(image, interpolated_right_lane_points, color=[255, 0, 0], thickness=2)
+
+    #superposed_image = helpers.weighted_img(hough_image, image, α=0.8, β=1., λ=0.)
     # then save them to the test_images directory.
+
     output_path_filename = os.path.join(imageSourceDir, "out_"+i)
-    cv2.imwrite(output_path_filename,superposed_image)
+    cv2.imwrite(output_path_filename,image)

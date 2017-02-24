@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 import numpy as np
 import cv2
 from functools import reduce
@@ -76,6 +77,8 @@ def classify_left_right_lanes(lines):
 
 def interpolate_hough_lines(lines):
 
+    assert len(lines) > 1
+
     x=[]
     y=[]
     for line in lines:
@@ -87,9 +90,18 @@ def interpolate_hough_lines(lines):
 
     f = interpolate.interp1d(np.asarray(x), np.asarray(y), kind='linear')
 
-    return f
+    # Predict data of estimated models
+    line_X = np.arange(min(x), max(x))
+    line_y_interp = f(line_X[:, np.newaxis])
+
+    points = list(zip(line_X, line_y_interp.astype(np.int64)))
+
+    return points
 
 def ransac_fit_hough_lines(lines):
+
+    assert len(lines) > 1
+
     x = []
     y = []
     for line in lines:
@@ -99,18 +111,17 @@ def ransac_fit_hough_lines(lines):
             y.append(y1)
             y.append(y2)
 
-
     X=np.asarray(x).reshape(len(x),1)
     y=np.asarray(y)
 
     # Robustly fit linear model with RANSAC algorithm
-    model_ransac = linear_model.RANSACRegressor(linear_model.LinearRegression())
+    model_ransac = linear_model.RANSACRegressor(linear_model.LinearRegression(), residual_threshold=10)
     model_ransac.fit(X, y)
     inlier_mask = model_ransac.inlier_mask_
     outlier_mask = np.logical_not(inlier_mask)
 
     # Predict data of estimated models
-    line_X = np.arange(min(X), max(X))
+    line_X = np.arange(min(X[inlier_mask]), max(X[inlier_mask]))
     line_y_ransac = model_ransac.predict(line_X[:, np.newaxis])
 
     #line_segments=np.array([line_X, line_y_ransac])#.reshape(4,int(int(line_X.size)/int(2)))
@@ -119,17 +130,8 @@ def ransac_fit_hough_lines(lines):
     return points
 
 def draw_model(img, points, color=[255, 0, 0], thickness=2):
-
-    # for point in points[::2]:
-    #     for next_point in points[1::2]:
-    #         cv2.line(img, (point[0], point[1]), (next_point[0], next_point[1]), color, thickness)
+    assert len(points) > 1
     cv2.line(img, points[0], points[-1], color, thickness)
-
-    # pairs = pairwise(points)
-    # [element for tupl in pairs for element in tupl]
-    # for pair in pairs:
-    #     for x1, y1, x2, y2 in list(pair):
-    #         cv2.line(img, (x1, y1), (x2, y2), color, thickness)
 
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
